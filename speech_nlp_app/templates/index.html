@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Processing App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1, h2 {
+            color: #5a5a5a;
+        }
+        form, .actions {
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input[type="file"], input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #5c67f2;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #5058cc;
+        }
+         .actions {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e7e7e7;
+            border-radius: 4px;
+        }
+        #qaInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech Processing App</h1>
+    
+    <!-- Form to Upload Audio -->
+    <h2>Upload Audio File</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="audioFile" name="file" accept=".wav, .mp3, .ogg, .m4a"><br>
+        <button type="button" onclick="uploadAudio()">Upload Audio</button>
+    </form>
+    <div id="transcriptionResponse" class="response"></div>
+
+    <!-- Actions for processing transcript -->
+    <div class="actions">
+        <button onclick="translateText()">Translate</button>
+        <button onclick="summarizeText()">Summarize</button>
+        <button onclick="toggleQA()">Question Answering</button>
+        <div id="qaInput">
+            <input type="text" id="question" placeholder="Enter your question here...">
+            <button onclick="answerQuestion()">Get Answer</button>
+        </div>
+    </div>
+
+    <!-- Response containers -->
+    <div id="translationResponse" class="response"></div>
+    <div id="summaryResponse" class="response"></div>
+    <div id="qaResponse" class="response"></div>
+
+    <script>
+        var currentTranscript = '';
+
+        function uploadAudio() {
+            var formData = new FormData(document.getElementById('uploadForm'));
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            }).then(response => response.json())
+            .then(data => {
+                currentTranscript = data.transcription;
+                document.getElementById('transcriptionResponse').textContent = 'Transcription: ' + currentTranscript;
+            }).catch(error => {
+                document.getElementById('transcriptionResponse').textContent = 'Error: ' + error;
+            });
+        }
+
+        function translateText() {
+            fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: currentTranscript }),
+            }).then(response => response.json())
+            .then(data => {
+                document.getElementById('translationResponse').textContent = 'Translated Text: ' + data.translated_text;
+            }).catch(error => {
+                document.getElementById('translationResponse').textContent = 'Error: ' + error;
+            });
+        }
+
+        function summarizeText() {
+            fetch('/summarize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: currentTranscript }),
+            }).then(response => response.json())
+            .then(data => {
+                document.getElementById('summaryResponse').textContent = 'Summary: ' + data.summary;
+            }).catch(error => {
+                document.getElementById('summaryResponse').textContent = 'Error: ' + error;
+            });
+        }
+
+        function toggleQA() {
+            var qaInput = document.getElementById('qaInput');
+            qaInput.style.display = qaInput.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function answerQuestion() {
+    var question = document.getElementById('question').value;
+    var context = document.getElementById('transcriptionResponse').textContent.split('Transcription: ')[1];
+    fetch('/question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: context, question: question }),
+    }).then(response => response.json())
+    .then(data => {
+        if (data.answer) {
+            document.getElementById('qaResponse').textContent = 'Answer: ' + data.answer;
+        } else {
+            throw new Error('No answer provided or error in processing.');
+        }
+    }).catch(error => {
+        document.getElementById('qaResponse').textContent = 'Error: ' + error.message;
+    });
+}
+
+    </script>
+</body>
+</html>
